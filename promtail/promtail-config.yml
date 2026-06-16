@@ -1,0 +1,34 @@
+server:
+  http_listen_port: 9080
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  - job_name: docker-containers
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 5s
+    relabel_configs:
+      # Usar o nome do container como label "container"
+      - source_labels: [__meta_docker_container_name]
+        target_label: container
+      # Usar o nome da imagem como label "image"
+      - source_labels: [__meta_docker_container_image]
+        target_label: image
+    pipeline_stages:
+      # Parsear o JSON emitido pela aplicação Python
+      - json:
+          expressions:
+            level: level
+            service: service
+            endpoint: endpoint
+            status_code: status_code
+      # Promover campos a labels para facilitar filtros no Grafana
+      - labels:
+          level:
+          service:
+          endpoint:
